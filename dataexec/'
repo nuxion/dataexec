@@ -1,0 +1,72 @@
+from abc import ABC, abstractmethod
+from importlib import import_module
+from typing import Dict, List
+
+from dataexec.types import Asset2, AssetChange, AssetMetadata, AssetT
+
+
+def _init_class(fullclass_path, meta: AssetMetadata) -> Asset2:
+    """get a class or object from a module. The fullclass_path should be passed as:
+    package.my_module.MyClass
+    """
+    module, class_ = fullclass_path.rsplit(".", maxsplit=1)
+    mod = import_module(module)
+    cls = getattr(mod, class_)
+    return cls(meta)
+
+
+class RegistrySpec(ABC):
+    kind_mapper: Dict[str, str]
+
+    @abstractmethod
+    def get(self, id: str) -> Asset2:
+        pass
+
+    @abstractmethod
+    def add(self, asset: Asset2):
+        pass
+
+    @abstractmethod
+    def commit(self, asset: Asset2, message: str):
+        pass
+
+    @abstractmethod
+    def delete(self, id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def list(self) -> List[AssetMetadata]:
+        pass
+
+
+class RegistryInMemory(RegistrySpec):
+    kind_mapper = {"textfile": "dataexec.types.AssetText2"}
+
+    def __init__(self):
+        self.data: Dict[str, AssetMetadata] = {}
+        self.changes: Dict[str, List[AssetChange]]
+
+    def get(self, id: str) -> Asset2:
+        meta = self.data.get(id)
+        asset = _init_class(self.kind_mapper[meta.kind], meta)
+
+        return asset
+
+    def create(self, asset: Asset2, msg: str):
+        change = AssetChange(commit=asset.get_hash(), msg=msg)
+        self.data[asset.id] = asset.meta
+        self.changes[asset.id] = [change]
+
+    def commit(self, asset: Asset2, msg: str, write: bool =True):
+        if write:
+            asset.write(asset.raw)
+        change = AssetChange(commit=asset.get_hash(), msg=msg)
+        self.data.update({asset.id: asset.meta})
+        self.changes[asset.id].append(change)
+
+    def delete(self, id: str) -> bool:
+        del self.data[id]
+        return True
+
+    def list(self) -> List[AssetMetadata]:
+        return self.data.values()
