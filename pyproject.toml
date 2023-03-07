@@ -40,10 +40,18 @@ path = "dataexec/__about__.py"
 dependencies = [
   "pytest",
   "pytest-cov",
+  "pytest-asyncio",
   "ipython",
+  "pylint~=2.16.2",
+  "isort~=5.12.0",
+  "black~=23.1.0",
+  "mypy~=1.0.1",
+  "Sphinx~=5.3.0",
+  "sphinx-autobuild",
+  "sphinx-rtd-theme",
 ]
 [tool.hatch.envs.default.scripts]
-cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=dataexec --cov=tests {args}"
+cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=dataexec {args}"
 no-cov = "cov --no-cov {args}"
 
 [[tool.hatch.envs.test.matrix]]
@@ -62,3 +70,8 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 88

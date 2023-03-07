@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, Field
@@ -9,7 +10,7 @@ AssetT = TypeVar("AssetT")
 class AssetChange(BaseModel):
     commit: str
     msg: str
-    created_at: datetime = Field(default_facatory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class AssetMetadata(BaseModel):
@@ -21,7 +22,7 @@ class AssetMetadata(BaseModel):
     derived_from: Optional[str] = None
     build_by_task: Optional[str] = None
     extra: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_facatory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -51,6 +52,13 @@ class Asset(Generic[AssetT]):
         obj = cls(raw=raw, meta=meta)
         return obj
 
+    @classmethod
+    def from_location(cls, location, id_=None) -> "Asset":
+        raise NotImplementedError()
+
+    def copy(self, location, new_id=None) -> str:
+        raise NotImplementedError()
+
     @property
     def raw(self) -> AssetT:
         return self._raw
@@ -62,7 +70,7 @@ class Asset(Generic[AssetT]):
     def write(self) -> bool:
         raise NotImplementedError()
 
-    def asset_exist(self) -> bool:
+    def it_exist(self) -> bool:
         raise NotImplementedError()
 
     def get_hash(self) -> str:
@@ -85,30 +93,37 @@ class Asset(Generic[AssetT]):
 
 class Output(BaseModel):
     status: str
+    current_task: str
+    elapsed: int
     from_task: Optional[str] = None
     assets: List[Asset] = Field(default_factory=list)
-    elapsed: str = ""
+    error: Optional[Exception] = None
+
+    class Config:
+        arbitrary_types_allowed = True
+        use_enum_values = True
+
+
+class StepParams(BaseModel):
+    params: Dict[str, Any] = Field(default_factory=dict)
+    asset: Optional[Asset] = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class Input(BaseModel):
     # params: Dict[str, Any] = Field(default_factory=dict)
-    from_task: Optional[str] = None
+    params: Dict[str, Any] = Field(default_factory=dict)
     assets: List[Asset] = Field(default_factory=list)
 
-
-class TaskMeta(BaseModel):
-    taskid: str
-    name: str
-    params: Dict[str, Any] = Field(default_factory=dict)
-
-
-class TaskDelayed(BaseModel):
-    execid: str
-    created_at: datetime = Field(default_facatory=datetime.utcnow)
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class OutputRef(BaseModel):
     from_task: str
+    task: str
     status: str
     assets: List[AssetMetadata] = Field(default_factory=list)
 
@@ -117,3 +132,23 @@ class InputRef(BaseModel):
     params: Dict[str, Any]
     assets: List[AssetMetadata] = Field(default_factory=list)
     from_task: Optional[str] = None
+
+
+class ExecStatus(str, Enum):
+    created = "CREATED"
+    waiting = "WAITING"
+    running = "RUNNING"
+    failed = "FAILED"
+    completed = "COMPLETED"
+
+
+class ExecLog(BaseModel):
+    step_name: str
+    execid: str
+    status: str = ExecStatus.created
+    error: Optional[Exception] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        use_enum_values = True
+        arbitrary_types_allowed = True
