@@ -4,6 +4,7 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/dataexec.svg)](https://pypi.org/project/dataexec)
 
 -----
+Generals tools for execution of data workflows
 
 **Table of Contents**
 
