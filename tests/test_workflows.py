@@ -37,3 +37,29 @@ def test_workflow_run():
     assert len(w.exec_log) == 2
     assert isinstance(result, types.Output)
     assert result.assets[0].raw == "modified asset"
+
+
+def test_workflow_run_with_params():
+    txt = "tests/text_asset.txt"
+    w = Workflow(
+        steps=[
+            Step("get_asset", get_asset),
+            Step("transform", process_text),
+        ]
+    )
+    result = w.run(txt=txt)
+    assert len(w.exec_log) == 2
+    assert isinstance(result, types.Output)
+    assert result.assets[0].raw == "modified asset"
+
+
+def test_workflow_run_error():
+    txt = "tests/text_asset.txt"
+    w = Workflow(
+        steps=[
+            Step("get_asset", get_asset),
+            Step("transform", process_text),
+        ]
+    )
+    with pytest.raises(errors.StepExecutionError):
+        w.run(txt=txt, error=True)

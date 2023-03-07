@@ -30,7 +30,7 @@ def get_asset_list(error=False):
 
 def test_steps():
     step = Step("test", get_asset)
-    result = step()
+    result = step({})
     assert isinstance(result, types.Output)
     assert result.status == types.ExecStatus.completed
 

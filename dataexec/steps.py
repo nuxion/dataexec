@@ -76,7 +76,7 @@ class Step:
         try:
             _started = time.time()
             self.execid = utils.secure_random_str()
-            if not kwargs:
+            if not kwargs and self._params:
                 result = self._func(*args, **self._params)
             else:
                 result = self._func(*args, **kwargs)
