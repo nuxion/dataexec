@@ -1,3 +1,4 @@
+import asyncio
 from importlib import import_module
 import hashlib
 import random
@@ -28,3 +29,17 @@ def get_class(fullclass_path):
     mod = import_module(module)
     cls = getattr(mod, class_)
     return cls
+
+
+async def from_async2sync(func, *args, **kwargs):
+    """Run sync functions from async code"""
+    loop = asyncio.get_running_loop()
+    rsp = await loop.run_in_executor(None, func, *args, **kwargs)
+    return rsp
+
+
+def from_sync2async(func, *args, **kwargs):
+    """run async functions from sync code"""
+    loop = asyncio.get_event_loop()
+    rsp = loop.run_until_complete(func(*args, **kwargs))
+    return rsp

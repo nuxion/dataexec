@@ -1,5 +1,5 @@
 import tempfile
-from dataexec.workflows import Workflow
+from dataexec.workflows import Sequence
 import pytest
 from dataexec.assets import TextAsset, copy_asset
 from dataexec.steps import Step
@@ -27,13 +27,13 @@ def process_text(asset: TextAsset, error=False):
 
 def test_workflow_run():
     txt = "tests/text_asset.txt"
-    w = Workflow(
+    w = Sequence(
         steps=[
             Step("get_asset", get_asset, params={"txt": txt}),
             Step("transform", process_text),
         ]
     )
-    result = w.run()
+    result = w()
     assert len(w.exec_log) == 2
     assert isinstance(result, types.Output)
     assert result.assets[0].raw == "modified asset"
@@ -41,13 +41,13 @@ def test_workflow_run():
 
 def test_workflow_run_with_params():
     txt = "tests/text_asset.txt"
-    w = Workflow(
+    w = Sequence(
         steps=[
             Step("get_asset", get_asset),
             Step("transform", process_text),
         ]
     )
-    result = w.run(txt=txt)
+    result = w(txt=txt)
     assert len(w.exec_log) == 2
     assert isinstance(result, types.Output)
     assert result.assets[0].raw == "modified asset"
@@ -55,11 +55,11 @@ def test_workflow_run_with_params():
 
 def test_workflow_run_error():
     txt = "tests/text_asset.txt"
-    w = Workflow(
+    w = Sequence(
         steps=[
             Step("get_asset", get_asset),
             Step("transform", process_text),
         ]
     )
     with pytest.raises(errors.StepExecutionError):
-        w.run(txt=txt, error=True)
+        w(txt=txt, error=True)

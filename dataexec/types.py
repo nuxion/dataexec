@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Dict, Generic, List, Optional, TypeVar, NewType, Union
 
 from pydantic import BaseModel, Field
 
@@ -91,11 +91,15 @@ class Asset(Generic[AssetT]):
         return f"<Asset [kind={self.kind}] in {self.location}>"
 
 
+StepReturn = NewType("StepReturn", Union[Asset, List[Asset]])
+
+
 class Output(BaseModel):
     status: str
-    current_task: str
+    current_step_id: str
+    current_step_name: str
     elapsed: int
-    from_task: Optional[str] = None
+    from_step: Optional[str] = None
     assets: List[Asset] = Field(default_factory=list)
     error: Optional[Exception] = None
 
