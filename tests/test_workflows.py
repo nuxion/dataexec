@@ -33,7 +33,7 @@ def test_workflow_run():
             Step("transform", process_text),
         ]
     )
-    result = w()
+    result = w.run()
     assert len(w.exec_log) == 2
     assert isinstance(result, types.Output)
     assert result.assets[0].raw == "modified asset"
@@ -47,9 +47,11 @@ def test_workflow_run_with_params():
             Step("transform", process_text),
         ]
     )
-    result = w(txt=txt)
-    assert len(w.exec_log) == 2
+    result = w.run(txt=txt)
+    result2 = w.run(txt)
+    assert len(w.exec_log) == 4
     assert isinstance(result, types.Output)
+    assert isinstance(result2, types.Output)
     assert result.assets[0].raw == "modified asset"
 
 
@@ -62,4 +64,4 @@ def test_workflow_run_error():
         ]
     )
     with pytest.raises(errors.StepExecutionError):
-        w(txt=txt, error=True)
+        w.run(txt=txt, error=True)

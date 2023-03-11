@@ -53,7 +53,9 @@ class Asset(Generic[AssetT]):
         return obj
 
     @classmethod
-    def from_location(cls, location, id_=None) -> "Asset":
+    def from_location(
+        cls, location, id_=None, author=None, derived_from=None
+    ) -> "Asset":
         raise NotImplementedError()
 
     def copy(self, location, new_id=None) -> str:
@@ -142,13 +144,26 @@ class ExecStatus(str, Enum):
     created = "CREATED"
     waiting = "WAITING"
     running = "RUNNING"
+    cancelled = "CANCELLED"
     failed = "FAILED"
-    completed = "COMPLETED"
+    done = "DONE"
 
 
 class ExecLog(BaseModel):
     step_name: str
-    execid: str
+    step_execid: str
+    wf_exec_id: Optional[str] = None
+    status: str = ExecStatus.created
+    error: Optional[Exception] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        use_enum_values = True
+        arbitrary_types_allowed = True
+
+
+class WorkflowExecLog(BaseModel):
+    wf_exec_id: Optional[str] = None
     status: str = ExecStatus.created
     error: Optional[Exception] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -4,6 +4,7 @@ import hashlib
 import random
 import string
 import secrets
+import inspect
 
 _letters = string.ascii_lowercase
 
@@ -42,4 +43,14 @@ def from_sync2async(func, *args, **kwargs):
     """run async functions from sync code"""
     loop = asyncio.get_event_loop()
     rsp = loop.run_until_complete(func(*args, **kwargs))
+    return rsp
+
+
+def async_wrapper(func, *args, **kwargs):
+    coro = inspect.iscoroutinefunction(func)
+    if coro:
+        loop = asyncio.get_event_loop()
+        rsp = loop.run_until_complete(func(*args, **kwargs))
+    else:
+        rsp = func(*args, **kwargs)
     return rsp

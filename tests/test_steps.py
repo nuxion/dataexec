@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from dataexec.assets import TextAsset
 from dataexec.steps import Step
 from dataexec import types, errors
@@ -16,6 +17,7 @@ async def aio_get_asset(error=False):
     if error:
         raise NameError("func failed")
 
+    await asyncio.sleep(0.01)
     asset = TextAsset.from_location("tests/text_asset.txt")
     return asset
 

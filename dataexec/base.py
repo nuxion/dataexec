@@ -4,11 +4,11 @@ from datetime import datetime
 from importlib import import_module
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from dataexec import types
+from dataexec import types, defaults
 from dataexec.types import Asset, AssetChange, AssetMetadata
 
 
-def _init_class(fullclass_path, meta: AssetMetadata) -> Asset:
+def _init_asset_class(fullclass_path, meta: AssetMetadata) -> Asset:
     """get a class or object from a module. The fullclass_path should be passed as:
     package.my_module.MyClass
     """
@@ -17,7 +17,6 @@ def _init_class(fullclass_path, meta: AssetMetadata) -> Asset:
     cls: Asset = getattr(mod, class_)
     obj = cls.from_meta(meta)
     return obj
-
 
 
 class AssetRegistrySpec(ABC):
@@ -48,13 +47,17 @@ class AssetRegistrySpec(ABC):
         pass
 
 
-
-
 class RegistrySpec(ABC):
-    asset_mapper: Dict[str, str]
+    def __init__(
+        self,
+        kind_mapper: Dict[str, str] = defaults.KIND_MAPPER,
+        params: Dict[str, Any] = {},
+    ):
+        self.kind_mapper = kind_mapper
+        self._params = params
 
     @abstractmethod
-    def get_asset(self, id: str) -> Asset:
+    def get_asset(self, id_: str) -> Asset:
         pass
 
     @abstractmethod
@@ -62,7 +65,7 @@ class RegistrySpec(ABC):
         pass
 
     @abstractmethod
-    def commit_asset(self, asset: Asset, message: str, write: bool = True):
+    def commit_asset(self, asset: Asset, msg: str, write: bool = True):
         pass
 
     @abstractmethod
@@ -86,44 +89,47 @@ class RegistrySpec(ABC):
         pass
 
 
-
-
-class AssetRegistryInMemory(AssetRegistrySpec):
-    kind_mapper = {"textfile": "dataexec.assets.AssetText"}
-
-    def __init__(self):
-        self.data: Dict[str, AssetMetadata] = {}
+class RegistryInMemory(RegistrySpec):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.assets: Dict[str, AssetMetadata] = {}
         self.changes: Dict[str, List[AssetChange]]
 
-    def get(self, id: str) -> Asset:
-        meta = self.data.get(id)
-        asset = _init_class(self.kind_mapper[meta.kind], meta)
+    def get_asset(self, id_: str) -> Asset:
+        meta = self.assets[id_]
+        asset = _init_asset_class(self.kind_mapper[meta.kind], meta)
 
         return asset
 
-    def create(self, asset: Asset, msg: str, write: bool = True):
+    def create_asset(self, asset: Asset, msg: str, write: bool = True):
         if write:
             asset.write()
         change = AssetChange(commit=asset.get_hash(), msg=msg)
-        self.data[asset.id] = asset.meta
+        self.assets[asset.id] = asset.meta
         self.changes[asset.id] = [change]
 
-    def commit(self, asset: Asset, msg: str, write: bool = True):
+    def commit_asset(self, asset: Asset, msg: str, write: bool = True):
         if write:
             asset.write()
         change = AssetChange(commit=asset.get_hash(), msg=msg)
-        self.data.update({asset.id: asset.meta})
+        self.assets.update({asset.id: asset.meta})
         self.changes[asset.id].append(change)
 
-    def delete(self, id: str) -> bool:
-        del self.data[id]
+    def delete_asset(self, id: str) -> bool:
+        del self.assets[id]
         return True
 
-    def list(self) -> List[AssetMetadata]:
-        return list(self.data.values())
+    def list_assets(self) -> List[AssetMetadata]:
+        return list(self.assets.values())
 
     def list_changes(self, asset_id: str) -> List[AssetChange]:
         return self.changes[asset_id]
+
+    def create_task(self, task_id: str):
+        raise NotImplementedError()
+
+    def register_task(self, task_id: str):
+        raise NotImplementedError()
 
 
 class TaskFutureSpec:
@@ -139,50 +145,3 @@ class TaskFutureSpec:
 
     def status(self) -> str:
         raise NotImplementedError()
-
-
-class TaskRunnerSpec:
-    def __init__(self, *, meta: types.TaskMeta, params: Dict[str, Any] = {}):
-        self.meta = meta
-        self.params = params
-
-    def run(self, inputs: types.Input) -> TaskFutureSpec:
-        raise NotImplementedError()
-
-    def register(self, result: types.OutputRef) -> bool:
-        raise NotImplementedError()
-
-
-class Sequence:
-    def __init__(self, tasks: List[TaskRunnerSpec]):
-        self._tasks = tasks
-
-    def start(self, inputs: types.Input):
-        for task in self._tasks:
-            fut = task.run(inputs)
-            while not fut.is_done():
-                time.sleep(5)
-            result = fut.get_result()
-            inputs = types.Input(from_task=task.meta.taskid, assets=result.assets)
-
-
-
-class Task:
-    name: str
-    func: Callable
-    notify: bool = True
-    repeat: int = 2
-            
-
-seq = Sequence(
-    [
-        TaskRunnerSpec(meta=types.TaskMeta(taskid="asd", name="pepe")),
-        TaskRunnerSpec(meta=types.TaskMeta(taskid="asd", name="pepe")),
-    ]
-)
-seq.start(types.Input())
-
-
-@seq.task(name="test", notifications=True, repeat=3, cache="5d")
-def example(params={}, assests=[]) -> Union[List[Asset], None]:
-    pass

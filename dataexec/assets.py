@@ -36,10 +36,13 @@ class TextAsset(Asset[str]):
     kind: str = "textfile"
 
     @classmethod
-    def from_location(cls, location, id_=None) -> "TextAsset":
+    def from_location(
+        cls, location, id_=None, author=None, derived_from=None
+    ) -> "TextAsset":
         raw = cls.open(location)
-        meta = build_metadata(location, id_=id_)
-        meta.kind = cls.kind
+        meta = build_metadata(
+            location, id_=id_, kind=cls.kind, author=author, derived_from=derived_from
+        )
         obj = cls(raw=raw, meta=meta)
         return obj
 
